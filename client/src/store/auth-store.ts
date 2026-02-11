@@ -7,6 +7,7 @@ interface User {
     fullName: string;
     email: string;
     username: string;
+    tier: "Free" | "Premium";
 }
 
 interface LoginOrSignupResponse {
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState>()(
             login: async (credentials) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await api.post<LoginOrSignupResponse>('/login', credentials);
+                    const response = await api.post<LoginOrSignupResponse>('/users/login', credentials);
                     set({
                         user: response.data.user,
                         isAuthenticated: true,
@@ -78,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
             signup: async (userData) => {
                 set({ isLoading: true, error: null });
                 try {
-                    await api.post<LoginOrSignupResponse>('/register', userData);
+                    await api.post<LoginOrSignupResponse>('/users/register', userData);
                     set({ isLoading: false });
                     // Optionally log them in automatically or redirect to login
                 } catch (error) {
@@ -97,7 +98,7 @@ export const useAuthStore = create<AuthState>()(
             logout: async () => {
                 set({ isLoading: true, error: null });
                 try {
-                    await api.post('/logout');
+                    await api.post('/users/logout');
                     set({
                         user: null,
                         isAuthenticated: false,

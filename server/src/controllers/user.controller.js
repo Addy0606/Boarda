@@ -39,7 +39,6 @@ const registerUser = async (req, res) => {
         const user = await User.create({
             fullName,
             avatar: "",
-            coverImage: "",
             email,
             password,
             username: username.toLowerCase()
@@ -88,15 +87,24 @@ const loginUser = async (req, res) => {
 
         const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
-        const options = {
+        const accessOptions = {
             httpOnly: true,
-            secure: true
+            secure: true,
+            sameSite: "none",
+            maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY)
+        }
+
+        const refreshOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY)
         }
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("accessToken", accessToken, accessOptions)
+            .cookie("refreshToken", refreshToken, refreshOptions)
             .json({
                 user: loggedInUser,
                 accessToken,
@@ -124,8 +132,9 @@ const logoutUser = async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: true
-        }
+            secure: true,
+            sameSite: "none"
+        };
 
         return res
             .status(200)

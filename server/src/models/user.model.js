@@ -29,16 +29,18 @@ const userSchema = new Schema(
             type: String, // cloudinary url
             required: false, // optional for now
         },
-        coverImage: {
-            type: String, // cloudinary url
-            required: false
-        },
+
         password: {
             type: String,
             required: [true, 'Password is required']
         },
         refreshToken: {
             type: String
+        },
+        tier: {
+            type: String,
+            enum: ["Free", "Premium"],
+            default: "Free"
         }
 
     },

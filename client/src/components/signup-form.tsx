@@ -50,7 +50,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
       navigate("/signin")
     } catch (err) {
       // Error handled by store
-      console.log(err)
     }
   }
   return (

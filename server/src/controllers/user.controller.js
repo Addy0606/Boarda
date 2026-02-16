@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -91,14 +92,14 @@ const loginUser = async (req, res) => {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY) * 1000
+            maxAge: 24 * 60 * 60 * 1000
         }
 
         const refreshOptions = {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY) * 1000
+            maxAge: 10 * 24 * 60 * 60 * 1000
         }
 
         return res
@@ -112,6 +113,7 @@ const loginUser = async (req, res) => {
                 message: "User logged In Successfully"
             })
     } catch (error) {
+        console.error("LOGIN_ERROR:", error);
         return res.status(500).json({ message: error.message })
     }
 }
@@ -175,14 +177,14 @@ const refreshAccessToken = async (req, res) => {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: parseInt(process.env.ACCESS_TOKEN_EXPIRY) * 1000
+            maxAge: 24 * 60 * 60 * 1000
         }
 
         const refreshOptions = {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: parseInt(process.env.REFRESH_TOKEN_EXPIRY) * 1000
+            maxAge: 10 * 24 * 60 * 60 * 1000
         }
 
         return res
@@ -202,9 +204,38 @@ const refreshAccessToken = async (req, res) => {
     }
 }
 
+const updateProfile = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                message: 'No file uploaded'
+            });
+        }
+
+        const result = await uploadToCloudinary(req.file.buffer);
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { avatar: result.secure_url },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Profile updated successfully',
+            user: updatedUser
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+}
+
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    updateProfile
 }

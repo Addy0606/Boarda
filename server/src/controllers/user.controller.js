@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../middlewares/error.middleware.js";
@@ -65,14 +66,63 @@ const loginUser = asyncHandler(async (req, res) => {
         $or: [{ username }, { email }]
     });
 
-    if (!user) {
-        throw new AppError(404, "User does not exist");
+        const accessOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 24 * 60 * 60 * 1000
+        }
+
+        const refreshOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 10 * 24 * 60 * 60 * 1000
+        }
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, accessOptions)
+            .cookie("refreshToken", refreshToken, refreshOptions)
+            .json({
+                user: loggedInUser,
+                accessToken,
+                refreshToken,
+                message: "User logged In Successfully"
+            })
+    } catch (error) {
+        console.error("LOGIN_ERROR:", error);
+        return res.status(500).json({ message: error.message })
     }
+}
 
-    const isPasswordValid = await user.isPasswordCorrect(password);
+const logoutUser = async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $set: {
+                    refreshToken: undefined
+                }
+            },
+            {
+                new: true
+            }
+        )
 
-    if (!isPasswordValid) {
-        throw new AppError(401, "Invalid user credentials");
+        const options = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none"
+        };
+
+        return res
+            .status(200)
+            .clearCookie("accessToken", options)
+            .clearCookie("refreshToken", options)
+            .json({ message: "User logged Out" })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id);
@@ -141,11 +191,19 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         process.env.REFRESH_TOKEN_SECRET
     );
 
-    const user = await User.findById(decodedToken?._id);
+        const accessOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 24 * 60 * 60 * 1000
+        }
 
-    if (!user) {
-        throw new AppError(401, "Invalid refresh token");
-    }
+        const refreshOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 10 * 24 * 60 * 60 * 1000
+        }
 
     if (incomingRefreshToken !== user?.refreshToken) {
         throw new AppError(401, "Refresh token is expired or used");
@@ -177,9 +235,38 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         });
 });
 
+const updateProfile = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                message: 'No file uploaded'
+            });
+        }
+
+        const result = await uploadToCloudinary(req.file.buffer);
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { avatar: result.secure_url },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Profile updated successfully',
+            user: updatedUser
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+}
+
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
-};
+    refreshAccessToken,
+    updateProfile
+}

@@ -37,6 +37,7 @@ export function LoginForm({
       navigate("/dashboard")
     } catch (err) {
       // Error is handled by store
+      console.log(err)
     }
   }
   return (
